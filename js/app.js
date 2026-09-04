@@ -53,10 +53,7 @@ function initApp() {
     dropJsonBtnText: document.getElementById('drop-json-btn-text'),
     topbarStatusTag: document.getElementById('topbar-status-tag'),
 
-    demoBtn: document.getElementById('demo-btn'),
     dropDemoBtn: document.getElementById('drop-demo-btn'),
-    autoDetectBtn: document.getElementById('auto-detect-btn'),
-    snapPdfBtn: document.getElementById('snap-pdf-btn'),
 
     // Topbar Zoom & Page Controls
     zoomOutBtn: document.getElementById('zoom-out-btn'),
