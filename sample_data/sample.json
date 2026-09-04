@@ -1,0 +1,66 @@
+[
+  {
+    "id": "item-1",
+    "page": 1,
+    "bbox": [0.08, 0.08, 0.92, 0.15],
+    "text": "DERİN ÖĞRENME TABANLI BELGE ANALİZİ VE METİN TESPİTİ RAPORU",
+    "confidence": 0.99,
+    "category": "TITLE"
+  },
+  {
+    "id": "item-2",
+    "page": 1,
+    "bbox": [0.08, 0.17, 0.55, 0.21],
+    "text": "Yazar: Yapay Zeka Araştırma Laboratuvarı",
+    "confidence": 0.97,
+    "category": "AUTHOR"
+  },
+  {
+    "id": "item-3",
+    "page": 1,
+    "bbox": [0.08, 0.23, 0.92, 0.35],
+    "text": "Özet: Bu çalışmada, taranmış ve dijital PDF belgeleri üzerindeki metin bloklarının, sınırlayıcı kutular (bounding box) yardımıyla tespit edilerek yüksek doğrulukla ayrıştırılması incelenmiştir.",
+    "confidence": 0.98,
+    "category": "PARAGRAPH"
+  },
+  {
+    "id": "item-4",
+    "page": 1,
+    "bbox": [0.08, 0.38, 0.45, 0.43],
+    "text": "1. Giriş ve Problem Tanımı",
+    "confidence": 0.99,
+    "category": "SECTION_HEADER"
+  },
+  {
+    "id": "item-5",
+    "page": 1,
+    "bbox": [0.08, 0.45, 0.92, 0.58],
+    "text": "Doküman görüntü analizi (Document Image Processing), karmaşık düzenli faturalar, sözleşmeler ve akademik yayınlar içerisindeki kritik metin alanlarının yerini belirlemek için Bounding Box koordinat sistemlerini kullanır.",
+    "confidence": 0.96,
+    "category": "PARAGRAPH"
+  },
+  {
+    "id": "item-6",
+    "page": 1,
+    "bbox": [0.08, 0.61, 0.92, 0.74],
+    "text": "Modelimiz; x0, y0, x1 ve y1 koordinat düzlemlerini normalize ederek farklı çözünürlüklerdeki belgeler arasında kayıpsız ölçekleme ve hızlı cümle görselleştirmesi sağlar.",
+    "confidence": 0.95,
+    "category": "PARAGRAPH"
+  },
+  {
+    "id": "item-7",
+    "page": 1,
+    "bbox": [0.08, 0.77, 0.45, 0.82],
+    "text": "2. Sonuç ve Gelecek Çalışmalar",
+    "confidence": 0.98,
+    "category": "SECTION_HEADER"
+  },
+  {
+    "id": "item-8",
+    "page": 1,
+    "bbox": [0.08, 0.84, 0.92, 0.93],
+    "text": "Geliştirilen etkileşimli panel sayesinde kullanıcılar, tespit edilen tüm metin bloklarını anlık olarak inceleyebilir, kopyalayabilir ve filtreleyebilir.",
+    "confidence": 0.99,
+    "category": "PARAGRAPH"
+  }
+]

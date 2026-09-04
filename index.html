@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>PDF Sentence & BBox Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css?v=40.0">
+  <!-- PDF.js Core library (Local Same-Origin for speed and reliability) -->
+  <script src="js/pdf.min.js"></script>
+</head>
+<body>
+  <div class="editor-app">
+    <!-- Top Toolbar -->
+    <header class="editor-topbar">
+      <div class="topbar-left">
+        <button type="button" id="top-pdf-btn" class="topbar-btn file-btn" title="PDF Yükle">
+          <i class="fa-solid fa-file-pdf"></i> <span id="top-pdf-label">PDF Yükle</span>
+        </button>
+        <input type="file" id="top-pdf-input" accept=".pdf,application/pdf" style="display:none">
+        
+        <button type="button" id="top-json-btn" class="topbar-btn file-btn" title="JSON Yükle">
+          <i class="fa-solid fa-file-code"></i> <span id="top-json-label">JSON Yükle</span>
+        </button>
+        <input type="file" id="top-json-input" accept=".json,application/json,text/plain" style="display:none">
+
+        <div id="topbar-status-tag" class="topbar-status-tag hidden"></div>
+
+        <button id="snap-pdf-btn" class="topbar-btn snap-btn" title="Tüm BBox'ları PDF üzerindeki gerçek metin konumlarına tam oturtur">
+          <i class="fa-solid fa-crosshairs"></i> PDF'e Hizala
+        </button>
+
+        <button id="auto-detect-btn" class="topbar-btn auto-detect-btn" title="PDF üzerindeki kutusuz cümleleri otomatik tespit et">
+          <i class="fa-solid fa-sparkles"></i> Eksikleri Otomatik Bul
+        </button>
+
+        <button id="demo-btn" class="topbar-btn demo-btn" title="Örnek Sözleşme Verisini Yükle">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Demo Yükle
+        </button>
+      </div>
+
+      <!-- Center Zoom & Page Controls -->
+      <div class="topbar-center">
+        <button id="zoom-out-btn" class="zoom-btn" title="Uzaklaştır">-</button>
+        <button id="zoom-in-btn" class="zoom-btn" title="Yakınlaştır">+</button>
+        <div class="zoom-select-wrap">
+          <span id="zoom-value">%150</span>
+        </div>
+        <div class="topbar-divider"></div>
+        <div class="page-nav-wrap">
+          <span>Page</span>
+          <input type="number" id="page-number-input" min="1" value="1" disabled>
+          <span id="page-total-label">/ 0</span>
+        </div>
+      </div>
+
+      <!-- Topbar Right: Export -->
+      <div class="topbar-right">
+        <button id="export-json-btn" class="topbar-btn export-btn" title="Düzenlenmiş JSON'u İndir">
+          <i class="fa-solid fa-download"></i> JSON İndir
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="editor-workspace">
+      <!-- Center: PDF Viewport -->
+      <main class="pdf-viewport" id="pdf-viewport">
+        <!-- Floating notification when PDF is loaded but JSON is not -->
+        <div id="viewport-banner" class="viewport-banner hidden">
+          <div class="banner-content">
+            <i class="fa-solid fa-circle-info banner-icon"></i>
+            <span id="banner-text">PDF görüntülendi. Cümleleri ve Bounding Box kutularını görmek için JSON dosyanızı seçin:</span>
+            <button type="button" id="banner-json-btn" class="banner-upload-btn">
+              <i class="fa-solid fa-file-code"></i> JSON Seç
+            </button>
+            <input type="file" id="banner-json-input" accept=".json,application/json,text/plain" style="display:none">
+          </div>
+          <button id="banner-close-btn" class="banner-close-btn" title="Kapat">&times;</button>
+        </div>
+
+        <!-- Initial File Drop Prompt -->
+        <div id="drop-zone" class="drop-zone">
+          <div class="drop-card">
+            <div class="drop-icons">
+              <i class="fa-solid fa-file-pdf"></i>
+              <i class="fa-solid fa-plus"></i>
+              <i class="fa-solid fa-file-code"></i>
+            </div>
+            <h2>PDF ve JSON Dosyalarını Yükleyin</h2>
+            <p>Dosyalarınızı buraya sürükleyip bırakabilir veya aşağıdaki butonlara basarak seçebilirsiniz</p>
+            
+            <!-- Live Selection Status Cards -->
+            <div class="selection-status-row">
+              <div id="card-status-pdf" class="status-chip waiting">
+                <i class="fa-solid fa-file-pdf"></i>
+                <div class="chip-info">
+                  <span class="chip-title">PDF Belgesi</span>
+                  <span id="card-pdf-desc" class="chip-sub">Henüz seçilmedi</span>
+                </div>
+              </div>
+              <div id="card-status-json" class="status-chip waiting">
+                <i class="fa-solid fa-file-code"></i>
+                <div class="chip-info">
+                  <span class="chip-title">JSON Verisi</span>
+                  <span id="card-json-desc" class="chip-sub">Henüz seçilmedi</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="drop-actions">
+              <button type="button" id="drop-pdf-btn" class="btn-action primary" title="PDF Seç">
+                <i class="fa-solid fa-upload"></i> <span id="drop-pdf-btn-text">PDF Seç</span>
+              </button>
+              <input type="file" id="drop-pdf-input" accept=".pdf,application/pdf" style="display:none">
+
+              <button type="button" id="drop-json-btn" class="btn-action secondary" title="JSON Seç">
+                <i class="fa-solid fa-brackets-curly"></i> <span id="drop-json-btn-text">JSON Seç</span>
+              </button>
+              <input type="file" id="drop-json-input" accept=".json,application/json,text/plain" style="display:none">
+            </div>
+
+            <div id="drop-hint-msg" class="drop-hint-msg hidden"></div>
+
+            <button id="drop-demo-btn" class="demo-link-btn">Örnek Banka Sözleşmesi Demosunu Aç</button>
+          </div>
+        </div>
+
+        <!-- Scrollable PDF pages container -->
+        <div id="pdf-scroll-view" class="pdf-scroll-view hidden">
+          <!-- Rendered pages & SVG/HTML bounding box overlays injected here -->
+        </div>
+      </main>
+
+      <!-- Right Sidebar (Tool Panel) -->
+      <aside class="editor-sidebar" id="editor-sidebar">
+        <!-- Navigation Buttons -->
+        <div class="sidebar-section">
+          <button id="prev-btn" class="sidebar-btn full-btn">Prev</button>
+          <button id="next-btn" class="sidebar-btn full-btn">Next</button>
+          <button id="remove-btn" class="sidebar-btn full-btn remove-btn">Remove</button>
+        </div>
+
+        <!-- Mode Toggles: Draw Mode -->
+        <div class="sidebar-section button-pair">
+          <button id="draw-mode-off-btn" class="sidebar-toggle-btn active-blue">Draw Mode Off</button>
+          <button id="draw-mode-on-btn" class="sidebar-toggle-btn inactive-white">Draw Mode On</button>
+        </div>
+
+        <!-- Mode Toggles: Create / Add Sentence -->
+        <div class="sidebar-section button-pair">
+          <button id="create-sentence-btn" class="sidebar-toggle-btn active-blue">Create New Sentence</button>
+          <button id="add-existed-sentence-btn" class="sidebar-toggle-btn inactive-white">Add Existed Sentence</button>
+        </div>
+
+        <!-- Mode Toggles: Visibility Filter -->
+        <div class="sidebar-section button-pair">
+          <button id="just-selected-btn" class="sidebar-toggle-btn inactive-white">Just Selected</button>
+          <button id="all-sentence-btn" class="sidebar-toggle-btn active-blue">All Sentence</button>
+        </div>
+
+        <!-- ID Editor Form -->
+        <div class="sidebar-section form-block">
+          <label class="form-label" for="bbox-id-input">Id</label>
+          <input type="text" id="bbox-id-input" class="form-input" placeholder="ID giriniz">
+          <button id="save-id-btn" class="sidebar-btn full-btn action-save-btn">Save Id</button>
+        </div>
+
+        <!-- Paragraph / Sentence Text Editor Form -->
+        <div class="sidebar-section form-block grow-block">
+          <label class="form-label" for="bbox-text-input">Input paragraph text</label>
+          <textarea id="bbox-text-input" class="form-textarea" placeholder="Seçili cümlenin veya paragrafın metni burada görüntülenecektir..."></textarea>
+          <button id="save-text-btn" class="sidebar-btn full-btn action-save-btn">Save Text</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/sentence-splitter.js?v=126.0"></script>
+  <script src="js/bbox-parser.js?v=126.0"></script>
+  <script src="js/overlay.js?v=126.0"></script>
+  <script src="js/pdf-viewer.js?v=126.0"></script>
+  <script src="sample_data/sample-data.js?v=126.0"></script>
+  <script src="js/app.js?v=126.0"></script>
+</body>
+</html>
