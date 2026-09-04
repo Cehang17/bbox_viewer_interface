@@ -761,7 +761,7 @@ class SentenceSplitter {
     if (Array.isArray(cells) && cells.length > 0) {
       cells.forEach((cell, idx) => {
         const text = (cell.text || cell.ocr_text || cell.content || `Hücre #${idx + 1}`).trim();
-        const box = cell.bbox || cell.polygon || cell.ocr_polygon || cell.coordinates;
+        const box = cell.bbox || cell.rawCoords || cell.polygon || cell.ocr_polygon || cell.coordinates || cell.box;
         const rect = this._getRectFromPolygonOrBox(box);
         if (rect) {
           cellItems.push({
@@ -770,7 +770,9 @@ class SentenceSplitter {
             category: 'Table Cell',
             isTableCell: true,
             row: cell.row_index !== undefined ? cell.row_index : (cell.row || 0),
-            col: cell.col_index !== undefined ? cell.col_index : (cell.col || 0)
+            col: cell.col_index !== undefined ? cell.col_index : (cell.col || 0),
+            rowspan: cell.rowspan || cell.row_span || 1,
+            colspan: cell.colspan || cell.col_span || 1
           });
         }
       });
@@ -1007,12 +1009,29 @@ class SentenceSplitter {
       }
     };
 
-    for (let i = 0; i < normalizedItems.length; i++) {
-      const item = normalizedItems[i];
+    let currentTableBlock = [];
 
-      // A. Table Cell: always separate
-      if (item.category === 'Table Cell') {
-        flushTextBlock();
+    const flushTableBlock = () => {
+      if (currentTableBlock.length === 0) return;
+      const tBlock = currentTableBlock;
+      currentTableBlock = [];
+
+      const Classifier = (typeof TableClassifier !== 'undefined')
+        ? TableClassifier
+        : (typeof require !== 'undefined' ? (() => { try { return require('./table-classifier.js'); } catch(e) { return null; } })() : null);
+
+      if (Classifier && typeof Classifier.processTable === 'function') {
+        const { items: tableItems, nextSentenceNumber } = Classifier.processTable({ cells: tBlock }, pageNum, currentSentenceNum);
+        if (tableItems && tableItems.length > 0) {
+          currentSentenceNum = nextSentenceNumber;
+          tableItems.forEach(it => {
+            finalSentenceBBoxes.push(it);
+          });
+          return;
+        }
+      }
+
+      tBlock.forEach(item => {
         const sNum = currentSentenceNum++;
         finalSentenceBBoxes.push({
           id: `bbox-p${pageNum}-t${sNum}`,
@@ -1027,8 +1046,21 @@ class SentenceSplitter {
           category: 'Table Cell',
           confidence: 0.99
         });
+      });
+    };
+
+    for (let i = 0; i < normalizedItems.length; i++) {
+      const item = normalizedItems[i];
+
+      // A. Table Cell: gather into table block for structural classification & accessible reading order
+      if (item.category === 'Table Cell') {
+        flushTextBlock();
+        currentTableBlock.push(item);
         continue;
       }
+
+      // If non-table cell arrives, flush any ongoing table block
+      flushTableBlock();
 
       // B. Title: always separate (never merged with plain text before or after)
       if (item.category === 'Title') {
@@ -1096,6 +1128,7 @@ class SentenceSplitter {
     }
 
     flushTextBlock();
+    flushTableBlock();
 
     return {
       items: finalSentenceBBoxes,

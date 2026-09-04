@@ -11,15 +11,24 @@ PDF belgeleri üzerinde JSON formatındaki sınırlayıcı kutuları (**Bounding
 - **Çok Satırlı Cümleler için Oransal BBox:** Tek bir cümle birden fazla satıra yayıldığında her satır için karakter oranına göre ayrı BBox üretilir ancak tüm satırlar **aynı `sentence_id` ve rozet numarasını** paylaşır.
 - **Madde İmleri & Başlık Ayrımı:** Madde imleri (`•`, `-`, `▪`, `a)`, `b)`) oransal olarak ayıklanır, başlıklar ve iki nokta ile biten ibareler bağımsız cümle olarak konumlandırılır.
 
-### 2. 📑 Layout (Düzen) ve Kategori Duyarlılığı
+### 2. 📊 Tablo Sınıflandırma ve Erişilebilir Okuma Sırası (`table-classifier.js`)
+Sistem, PDF belgelerindeki tabloları yalnızca standart $N \times M$ grid olarak ele almak yerine, yapısal özelliklerini analiz ederek **6 temel kategoride** sınıflandırır ve ekran okuyucu/TTS dostu anlamsal okuma sırasına dönüştürür:
+- **`A_MATRIX` (Matris Tablo):** Satır ve sütun başlıklarının kesişimini ilişkilendirerek okur (`"[Ocak Ayı] - [Elektrik Gideri]: 1.250 TL"`).
+- **`B_KEY_VALUE` (Form / Anahtar-Değer):** Soldan sağa etiket ve değer çifti olarak okur (`"[Müşteri Adı]: Hasan Yılmaz"`).
+- **`C_PARALLEL_TEXT` (Paralel Metin / Sahte Tablo):** Yanlış tespit edilmiş yan yana gazete sütunlarında tablo yapısını kaldırır; sütun bazında yukarıdan aşağıya standart paragraf akışıyla okur.
+- **`D_MERGED_CELLS` (Birleştirilmiş Hücreli Tablo):** `rowspan` ve `colspan` yayımlı hiyerarşik başlıkları ilişkilendirerek okur (`"[2025 Yılı] altındaki [Gelir]: 50.000 TL"`).
+- **`E_FORMULA` (Formül / Hesaplama Cetveli):** Matematiksel eşitlikleri ve operatörleri seslendirilebilir metne dönüştürür (`"KDV Tutarı = Matrah çarpı yüzde 20 eşittir 200 TL"`).
+- **`F_HYBRID_NOTE` (Hibrit / Dipnotlu Tablo):** Ana tabloyu tamamladıktan sonra altındaki açıklama ve dipnot bloklarını ayrık olarak okur (`"Tablo Notu: Veriler TCMB kurlarına göredir."`).
+
+### 3. 📑 Layout (Düzen) ve Kategori Duyarlılığı
 - **`title` (Başlık):** Bağımsız bir varlık olarak ele alınır. Başlıktan önce veya sonra gelen düz metinler kesinlikle başlıkla birleştirilmez.
-- **`table` (Tablo):** Hücre bazlı (`cell-by-cell`) işlenir; her tablo hücresi kendine ait bağımsız bir BBox ve cümle numarası alır.
+- **`table` (Tablo):** `TableClassifier` ile otomatik analiz edilir; hücre bazlı (`cell-by-cell`) işlenir ve türe özel anlamsal okuma metni üretilir.
 - **`abandon` (Arka Plan / Filigran / Dipnot):** BBox katmanında kendi kategorisiyle (`Abandon`) bağımsız olarak görselleştirilir.
 - **`plain text` (Düz Metin):** Aynı sütun akışı içerisindeki ardışık düz metin layout blokları önce birleştirilir, ardından NLP kurallarıyla cümlelere bölünür.
 - **İki Sütun (2-Column) Ayrımı:** İki sütunlu sayfalarda sol ve sağ sütunlar kesin olarak ayrı gruplanır; sütunlar arası yatay birleşme engellenir.
 - **Makro Kutu & Mükerrer Filtreleme:** Cümle ve satır kutularının arkasında kalan dev konteyner kutuları (`macro container`) ve yüksek çakışmalı mükerrer tespitler otomatik olarak temizlenir.
 
-### 3. 🎯 Etkileşimli Bounding Box Editörü (`overlay.js`)
+### 4. 🎯 Etkileşimli Bounding Box Editörü (`overlay.js`)
 - **8 Noktalı Boyutlandırma & Taşıma:** Her kutu 8 tutamaç (`nw, n, ne, e, se, s, sw, w`) ile yeniden boyutlandırılabilir ve fareyle sürüklenebilir.
 - **Yeni BBox Çizim Modu:** "Draw Mode" aktif edilerek PDF üzerinde fare ile serbestçe yeni sınırlayıcı kutular çizilebilir.
 - **Görünürlük Filtreleri:**
@@ -28,7 +37,7 @@ PDF belgeleri üzerinde JSON formatındaki sınırlayıcı kutuları (**Bounding
 - **ID & Metin Düzenleme:** Seçili kutunun ID'si ve metin içeriği sağ panelden anında düzenlenebilir ve kaydedilebilir.
 - **Dışa Aktarma:** Güncellenmiş BBox koordinatları ve metinleri JSON olarak indirilebilir.
 
-### 4. 🖥️ Modern Arayüz & PDF Görüntüleyici (`pdf-viewer.js`, `style.css`)
+### 5. 🖥️ Modern Arayüz & PDF Görüntüleyici (`pdf-viewer.js`, `style.css`)
 - **PDF.js Entegrasyonu:** Yüksek çözünürlüklü sürekli sayfa akışı (Continuous Scroll).
 - **Görünüm Kontrolleri:** Yakınlaştırma (Zoom In / Zoom Out / Fit Width / Fit Page).
 - **Tema Desteği:** Açık ve Koyu Tema (Light / Dark Mode).
@@ -48,6 +57,7 @@ directly_detect_bbox/
 ├── js/
 │   ├── app.js                  # Uygulama mantığı ve durum yönetimi
 │   ├── bbox-parser.js          # Evrensel JSON & koordinat ayrıştırma motoru
+│   ├── table-classifier.js     # 6 tipli tablo sınıflandırıcı & okuma sırası motoru
 │   ├── sentence-splitter.js    # JavaScript NLP cümle ve BBox hesaplayıcı
 │   ├── overlay.js              # BBox çizim, seçim, sürükleme ve boyutlandırma
 │   ├── pdf-viewer.js           # PDF render ve sayfa ölçekleme yönetimi

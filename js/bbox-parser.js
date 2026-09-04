@@ -609,6 +609,22 @@ class BBoxParser {
       // 0. TABLE & TABLE CELL HANDLING:
       // "tablolar üzerindeki düzenleme ise hücre bazlı olsun. her hücreyi ayrı cümle olarak al."
       if (data.cells || data.table_cells || data.cell_bboxes || data.rows || (data.layout_label === 'Table' && (data.cells || data.matches))) {
+        const Classifier = (typeof TableClassifier !== 'undefined')
+          ? TableClassifier
+          : (typeof require !== 'undefined' ? (() => { try { return require('./table-classifier.js'); } catch(e) { return null; } })() : null);
+
+        if (Classifier && typeof Classifier.processTable === 'function') {
+          const { items: tableItems } = Classifier.processTable(data, data.page || 1, 1);
+          if (tableItems && tableItems.length > 0) {
+            return tableItems.map(it => ({
+              ...it,
+              page: data.page || 1,
+              bbox: it.rawCoords,
+              layoutProcessed: true
+            }));
+          }
+        }
+
         if (Splitter) {
           const cells = Splitter.extractTableCells(data);
           if (cells.length > 0) {
