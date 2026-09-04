@@ -517,12 +517,14 @@ class BBoxParser {
       const hasLayoutsAndWords = data.some(it => it && (Array.isArray(it.elements) || Array.isArray(it.blocks)) && (Array.isArray(it.ocr_words) || Array.isArray(it.words) || Array.isArray(it.ocr_lines)));
       if (hasLayoutsAndWords) {
         const extracted = [];
+        let curSentenceIndex = 1;
         data.forEach((sub, pIdx) => {
           if (typeof sub === 'object' && sub !== null) {
             const pageNum = sub.page || sub.page_number || (pIdx + 1);
-            const layoutItems = this._processPageLayoutsWithWords(sub, pageNum);
+            const layoutItems = this._processPageLayoutsWithWords(sub, pageNum, curSentenceIndex);
             if (layoutItems && layoutItems.length > 0) {
               extracted.push(...layoutItems);
+              curSentenceIndex = layoutItems.nextSentenceIndex || (curSentenceIndex + layoutItems.length);
             } else {
               const fallback = this._extractDeep(sub);
               fallback.forEach(item => extracted.push({ ...item, page: item.page || pageNum }));
@@ -558,13 +560,15 @@ class BBoxParser {
         if (isPageWrapper) {
           // Extract from sub-arrays, preserving page number
           const items = [];
+          let curSentenceIndex = 1;
           data.forEach((pageObj, pageIdx) => {
             const pageNum = pageObj.page || pageObj.page_number || pageObj.page_num || pageObj.page_idx || (pageIdx + 1);
             
             // Check if this page has DocLayout-YOLO elements + Surya OCR words
-            const pageLayoutItems = this._processPageLayoutsWithWords(pageObj, pageNum);
+            const pageLayoutItems = this._processPageLayoutsWithWords(pageObj, pageNum, curSentenceIndex);
             if (pageLayoutItems && pageLayoutItems.length > 0) {
               items.push(...pageLayoutItems);
+              curSentenceIndex = pageLayoutItems.nextSentenceIndex || (curSentenceIndex + pageLayoutItems.length);
               return;
             }
 
@@ -1119,7 +1123,7 @@ class BBoxParser {
    * Consecutively occurring plain text layouts are merged and processed together with NLP rules.
    * Abandon, Table, and Title layouts are respected with dedicated boundaries.
    */
-  static _processPageLayoutsWithWords(pageObj, pageNum = 1) {
+  static _processPageLayoutsWithWords(pageObj, pageNum = 1, startSentenceIndex = 1) {
     const rawLayouts = pageObj.elements || pageObj.blocks || pageObj.layout_boxes || [];
     if (!Array.isArray(rawLayouts) || rawLayouts.length === 0) return null;
 
@@ -1356,7 +1360,7 @@ class BBoxParser {
     }
 
     const pageResultItems = [];
-    let sentenceGlobalIndex = 1;
+    let sentenceGlobalIndex = startSentenceIndex;
 
     for (const group of layoutGroups) {
       // 1. TABLE:
@@ -1754,7 +1758,11 @@ class BBoxParser {
       }
     }
 
-    return pageResultItems.length > 0 ? pageResultItems : null;
+    if (pageResultItems.length > 0) {
+      pageResultItems.nextSentenceIndex = sentenceGlobalIndex;
+      return pageResultItems;
+    }
+    return null;
   }
 
   /**

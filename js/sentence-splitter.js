@@ -1146,7 +1146,7 @@ class SentenceSplitter {
     // Group items by page
     const itemsByPage = new Map();
     items.forEach(it => {
-      const p = it.page || 1;
+      const p = parseInt(it.page || 1, 10);
       if (!itemsByPage.has(p)) itemsByPage.set(p, []);
       itemsByPage.get(p).push(it);
     });
@@ -1154,7 +1154,10 @@ class SentenceSplitter {
     const allSegmented = [];
     let currentSentenceNum = 1;
 
-    for (const [pageNum, pageItems] of itemsByPage.entries()) {
+    // Numerical page ordering (Page 1 -> Page 2 -> Page 3 ...)
+    const sortedPages = Array.from(itemsByPage.keys()).sort((a, b) => Number(a) - Number(b));
+    for (const pageNum of sortedPages) {
+      const pageItems = itemsByPage.get(pageNum);
       const res = this.processPageLinesIntoSentences(pageItems, pageNum, currentSentenceNum);
       allSegmented.push(...res.items);
       currentSentenceNum = res.nextSentenceNumber;
