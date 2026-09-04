@@ -345,76 +345,7 @@ class PDFViewer {
       return lines;
     } catch (e) {
       console.warn('Could not extract page text lines:', e);
-      return [];
     }
-  }
-
-  /**
-   * Automatically detect all text paragraphs from the PDF document that are NOT
-   * covered by any existing bounding box, and create bounding boxes for them
-   * using strict Turkish NLP sentence splitting and multi-line boundary rules.
-   */
-  async detectMissingBBoxesFromPDF(existingBBoxes = []) {
-    if (!this.pdfDoc) return [];
-
-    const newDetectedItems = [];
-    const Splitter = (typeof SentenceSplitter !== 'undefined')
-      ? SentenceSplitter
-      : (typeof require !== 'undefined' ? (() => { try { return require('./sentence-splitter.js'); } catch(e) { return null; } })() : null);
-
-    let maxSentenceNum = 0;
-    existingBBoxes.forEach(b => {
-      const sId = parseInt(b.sentence_id !== undefined ? b.sentence_id : (b.id_display !== undefined ? b.id_display : b.index), 10);
-      if (!isNaN(sId) && sId > maxSentenceNum) maxSentenceNum = sId;
-    });
-    let nextSentenceNum = maxSentenceNum + 1;
-
-    for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
-      const lines = await this.getPageTextLines(pageNum);
-      if (lines.length === 0) continue;
-
-      const pageExisting = existingBBoxes.filter(b => (b.page || 1) === pageNum);
-
-      // Filter lines not covered by existing boxes
-      const uncoveredLines = lines.filter(line => {
-        const [lx0, ly0, lx1, ly1] = line.rawCoords || [0, 0, 0, 0];
-        const midX = (lx0 + lx1) / 2;
-        const midY = (ly0 + ly1) / 2;
-
-        const isCovered = pageExisting.some(ex => {
-          const [exX0, exY0, exX1, exY1] = ex.rawCoords || [0, 0, 0, 0];
-          return midX >= exX0 - 10 && midX <= exX1 + 10 && midY >= exY0 - 8 && midY <= exY1 + 8;
-        });
-
-        return !isCovered;
-      });
-
-      if (uncoveredLines.length === 0) continue;
-
-      if (Splitter && typeof Splitter.processPageLinesIntoSentences === 'function') {
-        const res = Splitter.processPageLinesIntoSentences(uncoveredLines, pageNum, nextSentenceNum);
-        newDetectedItems.push(...res.items);
-        nextSentenceNum = res.nextSentenceNumber;
-      } else {
-        uncoveredLines.forEach((ln, idx) => {
-          newDetectedItems.push({
-            id: `auto-bbox-p${pageNum}-${nextSentenceNum}`,
-            page: pageNum,
-            sentence_id: nextSentenceNum,
-            id_display: nextSentenceNum,
-            sentence_number: nextSentenceNum++,
-            text: ln.text,
-            fullSentenceText: ln.text,
-            rawCoords: ln.rawCoords,
-            coordType: 'abs_points',
-            category: 'Sentence',
-            confidence: 0.99
-          });
-        });
-      }
-    }
-
-    return newDetectedItems;
   }
 }
 
