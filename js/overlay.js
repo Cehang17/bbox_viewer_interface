@@ -312,32 +312,30 @@ class BBoxOverlayManager {
   }
 
   /**
-   * Re-assign sequential sentence IDs to all items so there are no gaps
+   * Re-assign sequential sentence IDs to all items across all pages without resetting per page
    */
   reindexAllItems() {
-    let globalCounter = 0;
-    const pageNumbers = Array.from(this.bboxesByPage.keys()).sort((a, b) => a - b);
+    let globalIndex = 0;
+    let globalSentenceCounter = 0;
+    let lastSentenceKey = null;
+
+    const pageNumbers = Array.from(this.bboxesByPage.keys()).sort((a, b) => Number(a) - Number(b));
     for (const pNum of pageNumbers) {
       const items = this.bboxesByPage.get(pNum) || [];
-      const sentenceIdMap = new Map();
-      items.forEach(it => {
-        it.index = globalCounter + 1;
-        globalCounter++;
+      items.forEach((it, idx) => {
+        it.index = globalIndex;
+        globalIndex++;
 
-        const sKey = (it.sentence_id !== undefined && it.sentence_id !== null)
-          ? `s_${it.sentence_id}`
-          : (it.fullSentenceText ? `txt_${it.fullSentenceText}` : (it.id_display !== undefined ? `d_${it.id_display}` : null));
+        // Sibling line matching key: belongs to same page and sentence ID or full text
+        const sKey = `${pNum}_${(it.sentence_id !== undefined && it.sentence_id !== null) ? it.sentence_id : (it.fullSentenceText || it.text || `item_${idx}`)}`;
 
-        if (sKey !== null) {
-          if (!sentenceIdMap.has(sKey)) {
-            sentenceIdMap.set(sKey, sentenceIdMap.size + 1);
-          }
-          const sId = sentenceIdMap.get(sKey);
-          it.sentence_id = sId;
-          it.id_display = sId;
-        } else {
-          it.id_display = it.index;
+        if (lastSentenceKey !== null && sKey !== lastSentenceKey) {
+          globalSentenceCounter++;
         }
+        lastSentenceKey = sKey;
+
+        it.sentence_id = globalSentenceCounter;
+        it.id_display = globalSentenceCounter;
       });
     }
   }
