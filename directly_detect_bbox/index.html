@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF & JSON Bounding Box Inspector</title>
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body data-theme="dark">
+  <header class="toolbar">
+    <div class="left-tools">
+      <label>PDF <input id="pdfInput" type="file" accept="application/pdf" /></label>
+      <label>JSON <input id="jsonInput" type="file" accept="application/json" /></label>
+      <button id="loadSampleBtn">Load Sample</button>
+      <button id="drawModeBtn">Draw Mode</button>
+      <button id="exportBtn">Export JSON</button>
+    </div>
+    <div class="right-tools">
+      <button id="zoomOutBtn">-</button>
+      <button id="zoomInBtn">+</button>
+      <button id="fitWidthBtn">Fit Width</button>
+      <button id="fitPageBtn">Fit Page</button>
+      <select id="visibilityFilter">
+        <option value="all">All Sentence</option>
+        <option value="selected">Just Selected</option>
+      </select>
+      <button id="themeBtn">Theme</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="viewer-shell">
+      <div id="pdfViewer" class="pdf-viewer"></div>
+      <div id="overlayRoot" class="overlay-root"></div>
+    </section>
+
+    <aside class="editor-panel">
+      <h2>Selected BBox</h2>
+      <label>ID <input id="bboxIdInput" type="text" /></label>
+      <button id="saveIdBtn">Save Id</button>
+      <label>Sentence Text <textarea id="bboxTextInput" rows="8"></textarea></label>
+      <button id="saveTextBtn">Save Text</button>
+      <p id="status" class="status"></p>
+    </aside>
+  </main>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{
+  "sentences": [
+    {
+      "id": "1",
+      "sentence_id": 1,
+      "page": 1,
+      "category": "Title",
+      "text": "Örnek Başlık:",
+      "x": 90,
+      "y": 120,
+      "width": 180,
+      "height": 24
+    },
+    {
+      "id": "2",
+      "sentence_id": 2,
+      "page": 1,
+      "category": "Plain Text",
+      "text": "Dr. Ali vb. ifadeleri tek cümlede kalmalı.",
+      "x": 90,
+      "y": 170,
+      "width": 330,
+      "height": 24
+    },
+    {
+      "id": "3",
+      "sentence_id": 3,
+      "page": 1,
+      "category": "Abandon",
+      "text": "Filigran",
+      "x": 430,
+      "y": 730,
+      "width": 120,
+      "height": 20
+    },
+    {
+      "id": "4",
+      "sentence_id": 4,
+      "page": 1,
+      "category": "Table",
+      "text": "Hücre 1",
+      "x": 90,
+      "y": 230,
+      "width": 120,
+      "height": 30
+    },
+    {
+      "id": "5",
+      "sentence_id": 5,
+      "page": 1,
+      "category": "Table",
+      "text": "Hücre 2",
+      "x": 215,
+      "y": 230,
+      "width": 120,
+      "height": 30
+    }
+  ]
+}

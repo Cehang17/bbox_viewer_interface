@@ -1,2 +1,10 @@
 # bbox_viewer_interface
-Bu arayüz; taranmış belgeler, faturalar veya kitap sayfaları üzerindeki metin alanlarını (Bounding Box) görüntülemek, metin bloklarını doğru okuma sırasına göre sıralamak, OCR çıktısını (transkripsiyon) doğrulamak ve hatalı metinleri düzenlemek amacıyla tasarlanmıştır.
+
+Uygulama dosyaları `/home/runner/work/bbox_viewer_interface/bbox_viewer_interface/directly_detect_bbox` klasöründedir.
+
+Çalıştırma:
+
+```bash
+cd directly_detect_bbox
+python -m http.server 8080
+```

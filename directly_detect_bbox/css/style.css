@@ -1,0 +1,147 @@
+:root {
+  --bg: #101521;
+  --panel: #1b2233;
+  --text: #f1f5ff;
+  --muted: #8fa1c5;
+  --box: #ff4b4b;
+  --accent: #4ea1ff;
+}
+
+body[data-theme="light"] {
+  --bg: #f4f7ff;
+  --panel: #ffffff;
+  --text: #1d2b49;
+  --muted: #4b5f87;
+  --box: #c81f1f;
+  --accent: #1468d4;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem;
+  background: var(--panel);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.toolbar label,
+.toolbar button,
+.toolbar select {
+  margin-right: .4rem;
+  color: inherit;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  min-height: calc(100vh - 64px);
+}
+
+.viewer-shell {
+  position: relative;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-wrapper {
+  position: relative;
+}
+
+.page-canvas {
+  display: block;
+  box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  background: white;
+}
+
+.overlay-root {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  pointer-events: none;
+}
+
+.page-overlay {
+  position: absolute;
+  pointer-events: none;
+}
+
+.bbox {
+  position: absolute;
+  border: 2px solid var(--box);
+  background: rgba(255, 75, 75, 0.08);
+  pointer-events: auto;
+  cursor: move;
+}
+
+.bbox[data-selected="true"] {
+  border-color: var(--accent);
+  background: rgba(78, 161, 255, 0.15);
+}
+
+.badge {
+  position: absolute;
+  top: -14px;
+  left: -2px;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--box);
+  color: #fff;
+}
+
+.handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1px solid #fff;
+}
+
+.handle.nw { left: -4px; top: -4px; cursor: nwse-resize; }
+.handle.n { left: calc(50% - 4px); top: -4px; cursor: ns-resize; }
+.handle.ne { right: -4px; top: -4px; cursor: nesw-resize; }
+.handle.e { right: -4px; top: calc(50% - 4px); cursor: ew-resize; }
+.handle.se { right: -4px; bottom: -4px; cursor: nwse-resize; }
+.handle.s { left: calc(50% - 4px); bottom: -4px; cursor: ns-resize; }
+.handle.sw { left: -4px; bottom: -4px; cursor: nesw-resize; }
+.handle.w { left: -4px; top: calc(50% - 4px); cursor: ew-resize; }
+
+.editor-panel {
+  border-left: 1px solid rgba(255,255,255,.1);
+  background: var(--panel);
+  padding: 1rem;
+}
+
+.editor-panel label,
+.editor-panel button,
+.editor-panel input,
+.editor-panel textarea {
+  display: block;
+  width: 100%;
+  margin-bottom: .6rem;
+}
+
+.status {
+  color: var(--muted);
+  font-size: 12px;
+}
