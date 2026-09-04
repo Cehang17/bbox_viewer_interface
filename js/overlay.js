@@ -353,24 +353,109 @@ class BBoxOverlayManager {
 
   /**
    * Move / Insert BBox at target ID and shift all subsequent items up by 1
-   * (e.g. if moved to 90, 90 becomes 91, 91 becomes 92, etc., placed between 89 and 91)
+   * (e.g. if moved to 116, it takes ID 116, and existing 116 becomes 117, 117 becomes 118, etc.)
    */
   reorderBBoxId(bboxId, targetIdStr) {
     const targetId = parseInt(targetIdStr, 10);
     if (isNaN(targetId)) return false;
 
     const allItems = this.getAllItems();
-    const currentIdx = allItems.findIndex(it => String(it.id) === String(bboxId));
-    if (currentIdx === -1) return false;
+    const currentItem = allItems.find(it => String(it.id) === String(bboxId));
+    if (!currentItem) return false;
 
-    const [movedItem] = allItems.splice(currentIdx, 1);
+    const currentSentenceId = (currentItem.sentence_id !== undefined && currentItem.sentence_id !== null)
+      ? currentItem.sentence_id
+      : currentItem.id_display;
 
-    // Insert at target index (0-based)
-    const insertIdx = Math.max(0, Math.min(targetId, allItems.length));
-    allItems.splice(insertIdx, 0, movedItem);
+    // Identify all sibling lines belonging to this sentence on this page
+    const movingItems = allItems.filter(it => {
+      if (it.page !== currentItem.page) return false;
+      const sId = (it.sentence_id !== undefined && it.sentence_id !== null) ? it.sentence_id : it.id_display;
+      return String(it.id) === String(bboxId) || (sId !== undefined && sId === currentSentenceId);
+    });
 
-    // Re-distribute to pages
-    this.setData(allItems);
+    if (movingItems.length === 0) return false;
+
+    // Remove moving items from their current page list
+    const sourcePageItems = this.bboxesByPage.get(currentItem.page) || [];
+    movingItems.forEach(mIt => {
+      const idx = sourcePageItems.findIndex(it => String(it.id) === String(mIt.id));
+      if (idx !== -1) sourcePageItems.splice(idx, 1);
+    });
+
+    // Find the target location based on targetId (sentence ID / id_display)
+    const remainingItems = this.getAllItems();
+    
+    // Find all items belonging to the target sentence ID
+    const targetSiblings = remainingItems.filter(it => it.id_display === targetId || it.sentence_id === targetId);
+
+    if (targetSiblings.length > 0) {
+      const targetItem = targetSiblings[0];
+      const targetPageNum = targetItem.page;
+      const targetPageItems = this.bboxesByPage.get(targetPageNum) || [];
+
+      // Update page property of moving items if page changed
+      movingItems.forEach(mIt => mIt.page = targetPageNum);
+
+      const isMovingForward = (currentSentenceId !== undefined && currentSentenceId < targetId);
+
+      if (isMovingForward) {
+        // When moving forward: insert right AFTER the last sibling line of target sentence
+        const lastTargetSibling = targetSiblings[targetSiblings.length - 1];
+        const lastIdx = targetPageItems.findIndex(it => String(it.id) === String(lastTargetSibling.id));
+        const insertPos = (lastIdx !== -1) ? lastIdx + 1 : targetPageItems.length;
+        targetPageItems.splice(insertPos, 0, ...movingItems);
+      } else {
+        // When moving backward: insert right BEFORE the first sibling line of target sentence
+        const firstTargetSibling = targetSiblings[0];
+        const firstIdx = targetPageItems.findIndex(it => String(it.id) === String(firstTargetSibling.id));
+        const insertPos = (firstIdx !== -1) ? firstIdx : 0;
+        targetPageItems.splice(insertPos, 0, ...movingItems);
+      }
+    } else {
+      // Target ID does not currently exist: find closest position or boundary
+      const pageNumbers = Array.from(this.bboxesByPage.keys()).sort((a, b) => Number(a) - Number(b));
+      if (pageNumbers.length === 0) {
+        pageNumbers.push(1);
+        this.bboxesByPage.set(1, []);
+      }
+
+      if (targetId <= 0) {
+        // Insert at the very start of page 1
+        const firstPage = pageNumbers[0];
+        const firstPageItems = this.bboxesByPage.get(firstPage) || [];
+        movingItems.forEach(mIt => mIt.page = firstPage);
+        firstPageItems.unshift(...movingItems);
+      } else {
+        // Find closest preceding item with id_display < targetId
+        let bestPrecedingItem = null;
+        for (const it of remainingItems) {
+          const itId = it.id_display !== undefined ? it.id_display : it.sentence_id;
+          if (itId !== undefined && itId < targetId) {
+            if (!bestPrecedingItem || itId > (bestPrecedingItem.id_display !== undefined ? bestPrecedingItem.id_display : bestPrecedingItem.sentence_id)) {
+              bestPrecedingItem = it;
+            }
+          }
+        }
+
+        if (bestPrecedingItem) {
+          const targetPageNum = bestPrecedingItem.page;
+          const targetPageItems = this.bboxesByPage.get(targetPageNum) || [];
+          movingItems.forEach(mIt => mIt.page = targetPageNum);
+          const pIdx = targetPageItems.findIndex(it => String(it.id) === String(bestPrecedingItem.id));
+          const insertPos = (pIdx !== -1) ? pIdx + 1 : targetPageItems.length;
+          targetPageItems.splice(insertPos, 0, ...movingItems);
+        } else {
+          // Insert at the very end of the last page
+          const lastPage = pageNumbers[pageNumbers.length - 1];
+          const lastPageItems = this.bboxesByPage.get(lastPage) || [];
+          movingItems.forEach(mIt => mIt.page = lastPage);
+          lastPageItems.push(...movingItems);
+        }
+      }
+    }
+
+    // Re-index all items consecutively across pages
     this.reindexAllItems();
     this.reRenderAllPages();
     return true;
@@ -387,25 +472,40 @@ class BBoxOverlayManager {
     const currentItem = allItems.find(it => String(it.id) === String(bboxId));
     if (!currentItem) return false;
 
-    const targetItem = allItems.find(it => it.id_display === targetId && String(it.id) !== String(bboxId));
+    const targetItem = allItems.find(it => (it.id_display === targetId || it.sentence_id === targetId) && String(it.id) !== String(bboxId));
     if (!targetItem) return false;
 
-    // Merge sentences together
-    if (currentItem.text && currentItem.text.trim()) {
-      if (!targetItem.text.includes(currentItem.text.trim())) {
-        targetItem.text = targetItem.text ? `${targetItem.text}\n${currentItem.text.trim()}` : currentItem.text.trim();
-      }
-    }
-    currentItem.text = targetItem.text;
+    // Both currentItem and targetItem belong to the same sentence now:
+    const targetSentenceId = (targetItem.sentence_id !== undefined && targetItem.sentence_id !== null)
+      ? targetItem.sentence_id
+      : targetItem.id_display;
+
+    currentItem.sentence_id = targetSentenceId;
     currentItem.id_display = targetItem.id_display;
 
-    // Update badge in DOM
-    const boxEl = document.querySelector(`.bbox-rect[data-id="${bboxId}"]`);
-    if (boxEl) {
-      const badge = boxEl.querySelector('.bbox-tag-badge');
-      if (badge) badge.textContent = targetItem.id_display;
+    // Merge fullSentenceText
+    const targetFullText = targetItem.fullSentenceText || targetItem.text || '';
+    const currentText = currentItem.text || '';
+    let joinedText = targetFullText;
+    if (currentText && !targetFullText.includes(currentText)) {
+      joinedText = `${targetFullText} ${currentText}`.trim();
     }
+    targetItem.fullSentenceText = joinedText;
+    currentItem.fullSentenceText = joinedText;
 
+    // Place currentItem adjacent to targetItem on that page
+    const sourcePageItems = this.bboxesByPage.get(currentItem.page) || [];
+    const currIdx = sourcePageItems.findIndex(it => String(it.id) === String(bboxId));
+    if (currIdx !== -1) sourcePageItems.splice(currIdx, 1);
+
+    currentItem.page = targetItem.page;
+    const targetPageItems = this.bboxesByPage.get(targetItem.page) || [];
+    const tIdx = targetPageItems.findIndex(it => String(it.id) === String(targetItem.id));
+    const insertPos = (tIdx !== -1) ? tIdx + 1 : targetPageItems.length;
+    targetPageItems.splice(insertPos, 0, currentItem);
+
+    this.reindexAllItems();
+    this.reRenderAllPages();
     return targetItem;
   }
 
